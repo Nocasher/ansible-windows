@@ -2,6 +2,32 @@
 - name: Vyhledat a nainstalovat Windows Updates vč. ovladačů (bez Preview)
   hosts: all
   tasks:
+    - name: Odhlásit všechny uživatele kromě bota/admina
+      ansible.windows.win_powershell:
+        script: |
+          # Získání všech uživatelských relací
+          $sessions = quser
+          
+          # Projdeme každý řádek z výpisu quser (vynecháme záhlaví)
+          foreach ($session in $sessions[1..$sessions.Length]) {
+              if ($session -match "(\s+)(?<username>[a-zA-Z0-9\.\-_]+)(\s+)") {
+                  $user = $Matches['username'].Trim()
+                  
+                  # VÝJIMKA: Zde zadej uživatele, pod kterým běží Ansible/Semaphore, aby se neodhlásil!
+                  if ($user -ieq "Administrator") {
+                      Write-Host "Vynechávám uživatele: $user"
+                      continue
+                  }
+                  
+                  # Vytáhneme ID relace a uživatele odhlásíme
+                  if ($session -match "(?<id>\d+)\s+Disc" -or $session -match "(?ValidActive)\s+\d+\s+(?<id>\d+)") {
+                      $id = $Matches['id']
+                      Write-Host "Odhlašuji uživatele $user (ID: $id)"
+                      logoff $id
+                  }
+              }
+          }
+
     - name: Instalace kompletních aktualizací a ovladačů
       ansible.windows.win_updates:
         category_names:
@@ -13,5 +39,6 @@
           - Drivers
         reject_list:
           - ".*Preview.*"
+          - "KB5094128" # Pokud stále zlobí, nechej ji tu, jinak smaž
         reboot: yes
         reboot_timeout: 1200
