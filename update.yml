@@ -1,4 +1,5 @@
-name: Vyhledat a nainstalovat Windows Updates
+---
+- name: Vyhledat a nainstalovat Windows Updates
   hosts: all
   tasks:
     - name: Instalace kritickych a bezpecnostnich aktualizaci
