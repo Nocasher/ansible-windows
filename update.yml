@@ -2,10 +2,16 @@
 - name: Vyhledat a nainstalovat Windows Updates
   hosts: all
   tasks:
-    - name: Instalace kritickych a bezpecnostnich aktualizaci
+    - name: Instalace kompletních aktualizací a ovladačů
       ansible.windows.win_updates:
         category_names:
           - CriticalUpdates
           - SecurityUpdates
+          - UpdateRollups
+          - Updates
+          - DefinitionUpdates
+          - Drivers
+        reject_list:
+          - "*Preview*"
         reboot: yes
         reboot_timeout: 1200
