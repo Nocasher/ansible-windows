@@ -1,5 +1,5 @@
 ---
-- name: Vyhledat a nainstalovat Windows Updates
+- name: Vyhledat a nainstalovat Windows Updates vč. ovladačů (bez Preview)
   hosts: all
   tasks:
     - name: Instalace kompletních aktualizací a ovladačů
@@ -12,6 +12,6 @@
           - DefinitionUpdates
           - Drivers
         reject_list:
-          - "*Preview*"
+          - ".*Preview.*"
         reboot: yes
         reboot_timeout: 1200
