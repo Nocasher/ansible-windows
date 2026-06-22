@@ -1,0 +1,30 @@
+---
+- name: Kompletní update Debianu
+  hosts: all
+  tasks:
+    - name: Odhlásit všechny lokální uživatele (kromě bota/admina)
+      ansible.builtin.shell: |
+        who | grep -v "root" | grep -v "{{ ansible_user }}" | awk '{print $2}' | xargs -r -I {} pkill -9 -t {}
+      failed_when: false # Kdyby nikdo nebyl přihlášen, ať skript nespadne
+
+    - name: Aktualizace seznamu balíčků (apt update)
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Spuštění kompletního updatu systému (apt upgrade)
+      ansible.builtin.apt:
+        upgrade: dist
+        autoremove: yes
+        autoclean: yes
+      register: apt_result
+
+    - name: Kontrola, zda je vyžadován restart
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: reboot_required_file
+
+    - name: Restartování serveru v případě potřeby
+      ansible.builtin.reboot:
+        msg: "Ansible restartuje server po aktualizaci"
+        reboot_timeout: 600
+      when: reboot_required_file.stat.exists
