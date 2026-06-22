@@ -1,22 +1,50 @@
 ---
-- name: Kompletní update Debianu
+- name: Kompletní a bezpečný update Debianu
   hosts: all
-  tasks:
-    - name: Odhlásit všechny lokální uživatele (kromě bota/admina)
-      ansible.builtin.shell: |
-        who | grep -v "root" | grep -v "{{ ansible_user }}" | awk '{print $2}' | xargs -r -I {} pkill -9 -t {}
-      failed_when: false # Kdyby nikdo nebyl přihlášen, ať skript nespadne
+  vars:
+    # Globální nastavení pro ignorování interaktivních oken (vždy dá výchozí/No)
+    apt_env:
+      DEBIAN_FRONTEND: noninteractive
+      APT_LISTCHANGES_FRONTEND: none
 
-    - name: Aktualizace seznamu balíčků (apt update)
+  tasks:
+    - name: 1. První APT Update (s opakováním při chybě sítě)
       ansible.builtin.apt:
         update_cache: yes
+      environment: "{{ apt_env }}"
+      register: apt_update_1
+      # Opakuj příkaz, pokud selže (např. kvůli síti)
+      until: apt_update_1 is success
+      retries: 3    # Zkusí to maximálně 3x
+      delay: 5      # Mezi pokusy počká 10 vteřin
 
-    - name: Spuštění kompletního updatu systému (apt upgrade)
+    - name: 2. První APT Upgrade
       ansible.builtin.apt:
         upgrade: dist
+        # Zabrání přepsání konfiguráků (odpoví "No" na dotazy)
+        dpkg_options: "force-confold,force-confdef"
+      environment: "{{ apt_env }}"
+
+    - name: 3. Druhý APT Update (po upgradu)
+      ansible.builtin.apt:
+        update_cache: yes
+      environment: "{{ apt_env }}"
+      register: apt_update_2
+      until: apt_update_2 is success
+      retries: 3
+      delay: 10
+
+    - name: 4. Druhý APT Upgrade
+      ansible.builtin.apt:
+        upgrade: dist
+        dpkg_options: "force-confold,force-confdef"
+      environment: "{{ apt_env }}"
+
+    - name: 5. Čištění systému (Autoremove a Clean)
+      ansible.builtin.apt:
         autoremove: yes
         autoclean: yes
-      register: apt_result
+      environment: "{{ apt_env }}"
 
     - name: Kontrola, zda je vyžadován restart
       ansible.builtin.stat:
