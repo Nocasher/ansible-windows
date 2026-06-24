@@ -28,6 +28,31 @@
               }
           }
 
+    # --- NOVÉ ÚKOLY PRO VÝPIS WINDOWS UPDATES ---
+    - name: Pouze vyhledat dostupné aktualizace (bez instalace)
+      ansible.windows.win_updates:
+        category_names:
+          - CriticalUpdates
+          - SecurityUpdates
+          - UpdateRollups
+          - Updates
+          - DefinitionUpdates
+          - Drivers
+        reject_list:
+          - ".*Preview.*"
+        state: searched # Tento parametr zajistí, že se nic neinstaluje
+      register: win_updates_list
+
+    - name: VYPSAT DO KONZOLE DOSTUPNÉ WINDOWS AKTUALIZACE
+      ansible.builtin.debug:
+        msg: >-
+          {% set updates = [] %}
+          {% for id, update in win_updates_list.updates.items() %}
+            {% set _ = updates.append(update.title) %}
+          {% endfor %}
+          {{ updates }}
+    # --------------------------------------------
+
     - name: Instalace kompletních aktualizací a ovladačů
       ansible.windows.win_updates:
         category_names:
@@ -39,6 +64,6 @@
           - Drivers
         reject_list:
           - ".*Preview.*"
-          - "KB5094128" # Pokud stále zlobí, nechej ji tu, jinak smaž
+        state: installed # Teď je reálně nainstalujeme
         reboot: yes
         reboot_timeout: 1200
