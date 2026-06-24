@@ -16,7 +16,18 @@
       # Opakuj příkaz, pokud selže (např. kvůli síti)
       until: apt_update_1 is success
       retries: 3    # Zkusí to maximálně 3x
-      delay: 5      # Mezi pokusy počká 10 vteřin
+      delay: 5      # Mezi pokusy počká 5 vteřin
+
+    # --- NOVÉ ÚKOLY PRO VÝPIS DO KONZOLE ---
+    - name: 1.5a Zjištění dostupných aktualizací (Simulace)
+      ansible.builtin.command: apt-get --just-print upgrade
+      register: apt_simulated_output
+      changed_when: false
+
+    - name: 1.5b VYPSAT DO KONZOLE DOSTUPNÉ AKTUALIZACE
+      ansible.builtin.debug:
+        msg: "{{ apt_simulated_output.stdout_lines }}"
+    # ---------------------------------------
 
     - name: 2. První APT Upgrade
       ansible.builtin.apt:
